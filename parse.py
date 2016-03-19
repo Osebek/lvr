@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 values =  {}
 
 def readDimacs(file):
@@ -58,26 +58,15 @@ def opposite(Value):
 		return 'F'
 	elif Value =='F':
 		return 'T'
+
 def containsTorF(clause):
 	for literal in clause:
-		if not isinstance(literal, clause):
+		if literal == 'F' or literal == 'T':
 			return literal
 
 	return "N"
-
-
-def reduce(Formula):
-	newFormula = []
-	for clause in Formula:
-		val = containsTorF(clause)
-		if "N" == val:
-			newFormula.append(clause)
-		elif "F" == val:
-			newFormula.append([])
-		
 				
-
-def setValue(Literal,Value,Formula):
+def setValueAndReduce(Literal,Value,Formula):
 	newFormula = []
 	for clause in Formula:
 		newClause = []
@@ -88,14 +77,15 @@ def setValue(Literal,Value,Formula):
 				literal = opposite(Value)
 			newClause.append(literal)
 		
-		newFormula.append(newClause)
-
+		if containsTorF(newClause) == 'N':
+			newFormula.append(newClause)
+		elif containsTorF(newClause) == 'F':
+			newFormula.append([])
 	if Value == "T":
 		values[Literal] = Literal
 	else:
 		values[-Literal] = -Literal
-		
-	return newFormula 
+	return newFormula
 	
 def readAndSortSolution(file):
 	lines = [line.rstrip('\n') for line in open(file)]
@@ -103,6 +93,10 @@ def readAndSortSolution(file):
     for line in lines]
 	return sorted(solution[0])
 
+def getRandomElement(permutation):
+	for clause in permutation:
+		if len(clause) != 0:
+			return clause[random.randint(0,len(clause)-1)]
 
 
 
@@ -111,28 +105,27 @@ def dpll(Formula):
 	if len(Formula) == 0:
 		return ("SAT",sorted(values.values()))
 	elif hasEmptyClause(Formula):
-		return "UNSAT"
+		return ("UNSAT", sorted(values.values()))
 	elif canBeSimplified(Formula):
 		return dpll(simplify(Formula))
 	else:
-		el = np.random.permutation(Formula)[0][0]
-		if dpll(reduce(setValue(el,"T", Formula))) == "SAT":
-			return "SAT"
+		el = getRandomElement(np.random.permutation(Formula))
+		(dpllResult, _) = dpll(setValueAndReduce(el,"T", Formula))
+		if dpllResult == "SAT":
+			return ("SAT",sorted(values.values()))
 		else:
-			return dpll(reduce(setValue(el,"F", Formula)))
+			return dpll(setValueAndReduce(el,"F", Formula))
 
 
 
 
 
 
-
-	
-Formula = readDimacs("sudoku1.txt")
+Formula = readDimacs("quinn.txt")
 
 (SAT, solP) =  dpll(Formula)
 solT = readAndSortSolution("sudoku1_solution.txt")
-print solT == solP
-
+print solP
+print SAT
 
 
