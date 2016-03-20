@@ -24,6 +24,9 @@ def canBeSimplified(Formula):
 	return False
 
 def checkClause(clause, negatives, replace):
+	"""Checks if clause contains negatives of single literals
+	or literals that are known to be true, so the clauses that
+	contain them can be removed"""
 	newClause = []
 	for literal in clause:
 		if literal in replace:
@@ -33,6 +36,7 @@ def checkClause(clause, negatives, replace):
 	return newClause
 
 def simplify(Formula):
+	"""Simplifiy formula according to the rules"""
 	replace = {}
 	negatives = {}
 	newFormula = []
@@ -60,6 +64,7 @@ def opposite(Value):
 		return 'T'
 
 def containsTorF(clause):
+	"""Determines if a clause contains a literal with a fixed value T or F"""
 	for literal in clause:
 		if literal == 'T':
 			return 'T'
@@ -69,14 +74,24 @@ def containsTorF(clause):
 	return "N"
 
 def removeSetValues(clause):
+""" Remove values from a clause that contain literals with fixed values, i.e. 'T' or 'F' """
 	newClause = []
 	for literal in clause:
-		if literal != 'F':
+		if isinstance(literal,int):
 			newClause.append(literal)
 
 	return newClause
 				
 def setValueAndReduce(Literal,Value,Formula):
+"""
+Literal ... the literal that we are setting the Value to
+Value ... the truth value of a literal, can be 'T' or 'F'
+Formula ... the formula that we are reducing
+
+We set the value of a literal. The clauses in Formula that have 
+a literal with a value 'T' are removed and literals with 
+values 'F' are removed from clauses that contain them.
+"""	
 	newFormula = []
 	for clause in Formula:
 		newClause = []
@@ -99,12 +114,15 @@ def setValueAndReduce(Literal,Value,Formula):
 	return newFormula
 	
 def readAndSortSolution(file):
+	"""Read the solution and sort it so that we can compare it to the solution.
+	This was needed for testing Sudoku"""
 	lines = [line.rstrip('\n') for line in open(file)]
 	solution =      [[ int(n) for n in line.split() if  int(n) != 0 ]\
     for line in lines]
 	return sorted(solution[0])
 
 def getRandomElement(permutation):
+	"""Returns first viable element from permutation"""
 	for clause in permutation:
 		if len(clause) != 0:
 			return clause[random.randint(0,len(clause)-1)]
@@ -113,6 +131,7 @@ def getRandomElement(permutation):
 
 
 def dpll(Formula):
+	"""Main function of the dpll algorithm, works recursively. """
 	if len(Formula) == 0:
 		return ("SAT",sorted(values.values()))
 	elif hasEmptyClause(Formula):
