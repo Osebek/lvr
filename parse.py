@@ -61,10 +61,20 @@ def opposite(Value):
 
 def containsTorF(clause):
 	for literal in clause:
-		if literal == 'F' or literal == 'T':
-			return literal
+		if literal == 'T':
+			return 'T'
+		elif literal == 'F':
+			return 'F'
 
 	return "N"
+
+def removeSetValues(clause):
+	newClause = []
+	for literal in clause:
+		if literal != 'F':
+			newClause.append(literal)
+
+	return newClause
 				
 def setValueAndReduce(Literal,Value,Formula):
 	newFormula = []
@@ -80,7 +90,8 @@ def setValueAndReduce(Literal,Value,Formula):
 		if containsTorF(newClause) == 'N':
 			newFormula.append(newClause)
 		elif containsTorF(newClause) == 'F':
-			newFormula.append([])
+			newFormula.append(removeSetValues(newClause))
+
 	if Value == "T":
 		values[Literal] = Literal
 	else:
@@ -115,7 +126,6 @@ def dpll(Formula):
 			return ("SAT",sorted(values.values()))
 		else:
 			return dpll(setValueAndReduce(el,"F", Formula))
-
 
 
 
