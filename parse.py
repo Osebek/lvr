@@ -23,12 +23,14 @@ def hasEmptyClause(Formula):
 
 def simplify(formula):
     """Simplifiy formula according to the rules"""
-    while True:
+    run = True
+    while run:
+        run = False
         for clause in formula:
             if len(clause) == 1:
                 formula = setValueAndReduce(clause[0], 1, formula)
+                run = True
                 break
-        break
     return formula
 
 def setValueAndReduce(Literal,value,Formula):
@@ -60,17 +62,15 @@ def getRandomElement(permutation):
 
 def dpll(formula):
     """Main function of the dpll algorithm, works recursively. """
+    formula = simplify(formula)
     if len(formula) == 0:
         return True
     if hasEmptyClause(formula):
         return False
-    formula = simplify(formula)
-    if dpll(formula):
-        return True
     el = getRandomElement(np.random.permutation(formula))
-    if dpll(setValueAndReduce(el,1, formula)):
+    if dpll(setValueAndReduce(el, 1, formula)):
         return True
-    return dpll(setValueAndReduce(el,-1, formula))
+    return dpll(setValueAndReduce(el, -1, formula))
 
 def parse_args():
     parser = argparse.ArgumentParser(description = "Simple sat solver")
