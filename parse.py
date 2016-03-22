@@ -2,15 +2,18 @@
 
 from __future__ import print_function
 
+import sys
 import numpy as np
 import random
+import argparse
 values =  {}
 
-def readDimacs(file):
-    lines = [line.rstrip('\n') for line in open(file)]
-    Formula =      [[ int(n) for n in line.split() if  int(n) != 0 ]\
-    for line in lines if line[0] not in ('c', 'p')]
-    return Formula
+def parse(handle):
+    formula = []
+    valid = (l for l in handle if len(l) > 0 and l[0] not in ("c", "p"))
+    for line in valid:
+        formula.append([int(lit) for lit in line.split() if int(lit) != 0])
+    return formula
 
 def hasEmptyClause(Formula):
     for clause in Formula:
@@ -18,112 +21,36 @@ def hasEmptyClause(Formula):
             return True
         return False
 
-def canBeSimplified(Formula):
-    for clause in Formula:
-        if isinstance(clause,int):
-            return True
-        elif len(clause) == 1:
-            return True
-
-    return False
-
-def checkClause(clause, negatives, replace):
-    """Checks if clause contains negatives of single literals
-    or literals that are known to be true, so the clauses that
-    contain them can be removed"""
-    newClause = []
-    for literal in clause:
-        if literal in replace:
-            return []
-        if literal not in negatives:
-            newClause.append(literal)
-    return newClause
-
-def simplify(Formula):
+def simplify(formula):
     """Simplifiy formula according to the rules"""
-    replace = {}
-    negatives = {}
-    newFormula = []
-    for clause in Formula:
-        if isinstance(clause, int):
-            replace[clause] = clause
-            negatives[-clause[0]]= -clause[0]
-        elif len(clause) == 1 and isinstance(clause[0],int):
-            replace[clause[0]] = clause[0]
-            negatives[-clause[0]] = -clause[0]
+    while True:
+        for clause in formula:
+            if len(clause) == 1:
+                formula = setValueAndReduce(clause[0], 1, formula)
+                break
+        break
+    return formula
 
-
-    values.update(replace)
-    for clause in Formula:
-        clause = checkClause(clause, negatives,replace)
-        if len(clause) != 0:
-            newFormula.append(clause)
-
-    return newFormula
-
-def opposite(Value):
-    if Value == 'T':
-        return 'F'
-    elif Value =='F':
-        return 'T'
-
-def containsTorF(clause):
-    """Determines if a clause contains a literal with a fixed value T or F"""
-    for literal in clause:
-        if literal == 'T':
-            return 'T'
-        elif literal == 'F':
-            return 'F'
-
-    return "N"
-
-def removeSetValues(clause):
-    """ Remove values from a clause that contain literals with fixed values, i.e. 'T' or 'F' """
-    newClause = []
-    for literal in clause:
-        if isinstance(literal,int):
-            newClause.append(literal)
-
-    return newClause
-
-def setValueAndReduce(Literal,Value,Formula):
+def setValueAndReduce(Literal,value,Formula):
     """
-    Literal ... the literal that we are setting the Value to
-    Value ... the truth value of a literal, can be 'T' or 'F'
+    Literal ... the literal that we are setting the value to
+    value ... the truth value of a literal, can be 1 or -1
     Formula ... the formula that we are reducing
 
     We set the value of a literal. The clauses in Formula that have
-    a literal with a value 'T' are removed and literals with
-    values 'F' are removed from clauses that contain them.
+    a literal with a value "T" are removed and literals with
+    values "F" are removed from clauses that contain them.
     """
+    val = Literal * value
+    values[abs(Literal)] = val
     newFormula = []
-    for clause in Formula:
+    for clause in (c for c in Formula if val not in c):
         newClause = []
         for literal in clause:
-            if literal == Literal:
-                literal = Value
-            elif literal == -Literal:
-                literal = opposite(Value)
-            newClause.append(literal)
-
-        if containsTorF(newClause) == 'N':
-            newFormula.append(newClause)
-        elif containsTorF(newClause) == 'F':
-            newFormula.append(removeSetValues(newClause))
-
-    if Value == "T":
-        values[Literal] = Literal
-    else:
-        values[-Literal] = -Literal
+            if literal != -Literal:
+                newClause.append(literal)
+        newFormula.append(newClause)
     return newFormula
-
-def readAndSortSolution(file):
-    """Read the solution and sort it so that we can compare it to the solution.
-    This was needed for testing Sudoku"""
-    lines = [line.rstrip('\n') for line in open(file)]
-    solution =      [[ int(n) for n in line.split() if  int(n) != 0 ]\
-    for line in lines]
-    return sorted(solution[0])
 
 def getRandomElement(permutation):
     """Returns first viable element from permutation"""
@@ -131,35 +58,42 @@ def getRandomElement(permutation):
         if len(clause) != 0:
             return clause[random.randint(0,len(clause)-1)]
 
-
-
-
-def dpll(Formula):
+def dpll(formula):
     """Main function of the dpll algorithm, works recursively. """
-    if len(Formula) == 0:
-        return ("SAT",sorted(values.values()))
-    elif hasEmptyClause(Formula):
-        return ("UNSAT", sorted(values.values()))
-    elif canBeSimplified(Formula):
-        return dpll(simplify(Formula))
-    else:
-        el = getRandomElement(np.random.permutation(Formula))
-        (dpllResult, _) = dpll(setValueAndReduce(el,"T", Formula))
-        if dpllResult == "SAT":
-            return ("SAT",sorted(values.values()))
-        else:
-            return dpll(setValueAndReduce(el,"F", Formula))
+    if len(formula) == 0:
+        return True
+    if hasEmptyClause(formula):
+        return False
+    formula = simplify(formula)
+    if dpll(formula):
+        return True
+    el = getRandomElement(np.random.permutation(formula))
+    if dpll(setValueAndReduce(el,1, formula)):
+        return True
+    return dpll(setValueAndReduce(el,-1, formula))
 
+def parse_args():
+    parser = argparse.ArgumentParser(description = "Simple sat solver")
+    parser.add_argument("-i",
+                        "--input",
+                        help = "read from given file instead of stdin.",
+                        type = argparse.FileType("r"),
+                        default = sys.stdin)
+    parser.add_argument("-o",
+                        "--output",
+                        help = "write to given file instead of stdout.",
+                        type = argparse.FileType("w"),
+                        default = sys.stdout)
+    return parser.parse_args()
 
+def main():
+    args = parse_args()
+    formula = parse(args.input)
+    sat = dpll(formula)
+    if sat:
+        args.output.write(" ".join(str(n) for n in values.values()))
+    args.output.write("\n")
+    sys.exit(0 if sat else 1)
 
-
-
-Formula = readDimacs("sudoku1.txt")
-
-(SAT, solP) =  dpll(Formula)
-solT = readAndSortSolution("sudoku1_solution.txt")
-print(solP)
-print(solT)
-print(SAT)
-
-
+if __name__ == "__main__":
+    main()
