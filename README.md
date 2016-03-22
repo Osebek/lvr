@@ -22,6 +22,12 @@ Exit code of the solver indicates whether input formula is satisfiable. Zero
 return status means success and one means not satisfiable.
 
 
+## Samples
+
+Some relatively large and quite hard examples that naive implementation can
+solve in cca. 20 seconds can be found in `samples` folder.
+
+
 ## Authors
 
   * Nejc Vesel
