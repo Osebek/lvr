@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+
 import numpy as np
 import random
 values =  {}
@@ -150,11 +154,12 @@ def dpll(Formula):
 
 
 
-Formula = readDimacs("quinn.txt")
+Formula = readDimacs("sudoku1.txt")
 
 (SAT, solP) =  dpll(Formula)
 solT = readAndSortSolution("sudoku1_solution.txt")
-print solP
-print SAT
+print(solP)
+print(solT)
+print(SAT)
 
 
